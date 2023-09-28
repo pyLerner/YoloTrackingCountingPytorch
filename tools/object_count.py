@@ -37,7 +37,8 @@ def track_object_count(mot_file: str) -> object:
 
     df = pd.read_csv(mot_file, sep=' ')
 
-    df.columns = ['frame', 'objectID', 'X', 'Y', 'H', 'W', 'Question', 'Cls', 'Coord']
+    df.columns = ['frame', 'objectID', 'X', 'Y', 'H', 'W',
+                  'Question', 'Cls', 'Coord']
 
     print(df)
 
