@@ -1,8 +1,8 @@
 """Экстрактор изображений из видео файла"""
 
 import os
-# import numpy as np
 import cv2
+# import numpy as np
 from pathlib import Path
 
 
@@ -55,13 +55,6 @@ def frame_capture(
 		else:
 			break
 
-# Driver Code
-# if __name__ == '__main__':
-#
-# 	os.chdir('Images/tablo/')
-# 	# Calling the function
-# 	FrameCapture("m7316-4-2023-02-09_16-09-58140.avi")
-
 
 def capture_first_n_frames(path_in, path_out, n):
 
@@ -87,12 +80,12 @@ def capture_first_n_frames(path_in, path_out, n):
 
 if __name__ == "__main__":
 
-	video = Path('../video/2-3min_result.mp4').absolute()
+	video = Path('../video/gai_1min.mp4').absolute()
 	pic_dir = Path('../video/images')
 	frame_capture(
 		video,
 		pic_dir,
-		frequency=75,     # every 3 sec
+		frequency=50,     # every 2 sec
 		max_frames=0	 # Не ограничено
 	)
 

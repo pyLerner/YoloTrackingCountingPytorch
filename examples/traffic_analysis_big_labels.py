@@ -1,22 +1,14 @@
 import argparse
-import os
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import cv2
 import numpy as np
-from pathlib import Path
 from tqdm import tqdm
 from ultralytics import YOLO
 
 import supervision as sv
 
-LOG_DIR = Path('./runs/count')
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-num = len(list(LOG_DIR.iterdir()))
-LOG = LOG_DIR.joinpath(f'exp-{num}.txt')
-
 COLORS = sv.ColorPalette.default()
-# LOG = np.zeros((1, 4))
 
 ZONE_IN_POLYGONS = [
     np.array([[75, 300], [215, 300], [360, 400], [160, 420]]),
@@ -108,7 +100,7 @@ class DotAnnotator:
             # ... )
 
         """
-        font = cv2.FONT_HERSHEY_SIMPLEX
+        font = cv2.FONT_HERSHEY_DUPLEX
         for i in range(len(detections)):
             x1, y1, x2, y2 = detections.xyxy[i].astype(int)
             x1 = int((x1 + x2) / 2)
@@ -153,7 +145,7 @@ class DotAnnotator:
                 thickness=self.text_thickness,
             )[0]
 
-            y1 = y1 - 20   # label shifting up to 20 pix from center dot
+            y1 = y1 - 20   # label shifting up from center dot
 
             text_x = x1 + self.text_padding
             text_y = y1 - self.text_padding
@@ -198,7 +190,7 @@ class DetectionsManager:
         for zone_in_id, detections_in_zone in enumerate(detections_in_zones):
             for tracker_id in detections_in_zone.tracker_id:
                 self.tracker_id_to_zone_id.setdefault(tracker_id, zone_in_id)
-                # print(f'ID по зонам: {self.tracker_id_to_zone_id}')
+                print(f'ID по зонам: {self.tracker_id_to_zone_id}')
 
         for zone_out_id, detections_out_zone in enumerate(detections_out_zones):
             for tracker_id in detections_out_zone.tracker_id:
@@ -212,13 +204,19 @@ class DetectionsManager:
             lambda x: self.tracker_id_to_zone_id.get(x, -1)
         )(detections_all.tracker_id)
 
+        # TODO: ГДЕ-ТО НУЖНО ДОБАВИТЬ ФИЛЬТРАЦИЮ КЛАССОВ
+        # detections_all.class_id = np.vectorize(
+        #     lambda x: self.filter(...)
+        # filtering out detections with unwanted classes
+        # detections_all.filter(mask=mask, inplace=True)
+
         return detections_all[detections_all.class_id != -1]
 
 
 def initiate_polygon_zones(
     polygons: List[np.ndarray],
     frame_resolution_wh: Tuple[int, int],
-    triggering_position: sv.Position = sv.Position.CENTER,
+    triggering_position: sv.Position = sv.Position.BOTTOM_CENTER,
 ) -> List[sv.PolygonZone]:
     return [
         sv.PolygonZone(
@@ -249,17 +247,24 @@ class VideoProcessor:
 
         self.video_info = sv.VideoInfo.from_video_path(source_video_path)
         self.zones_in = initiate_polygon_zones(
-            ZONE_IN_POLYGONS, self.video_info.resolution_wh, sv.Position.CENTER
+            ZONE_IN_POLYGONS, self.video_info.resolution_wh, sv.Position.BOTTOM_CENTER
         )
         self.zones_out = initiate_polygon_zones(
-            ZONE_OUT_POLYGONS, self.video_info.resolution_wh, sv.Position.CENTER
+            ZONE_OUT_POLYGONS, self.video_info.resolution_wh, sv.Position.BOTTOM_CENTER
         )
 
         # self.box_annotator = sv.BoxAnnotator(color=COLORS)
         # self.box_annotator = sv.MaskAnnotator(color=COLORS)
-        self.box_annotator = DotAnnotator(color=COLORS, text_scale=0.5)
+
+        # Label, font size
+        self.box_annotator = DotAnnotator(
+            color=COLORS,
+            text_scale=7,
+            text_padding=30,
+            text_thickness=10
+        )
         self.trace_annotator = sv.TraceAnnotator(
-            color=COLORS, position=sv.Position.CENTER, trace_length=100, thickness=2
+            color=COLORS, position=sv.Position.BOTTOM_CENTER, trace_length=100, thickness=2
         )
         self.detections_manager = DetectionsManager()
 
@@ -271,14 +276,13 @@ class VideoProcessor:
         if self.target_video_path:
             with sv.VideoSink(self.target_video_path, self.video_info) as sink:
                 # for frame in tqdm(frame_generator, total=self.video_info.total_frames):
-                for i, frame in enumerate(frame_generator):
-                    annotated_frame = self.process_frame(i, frame, log=LOG)
+                for frame in frame_generator:
+                    annotated_frame = self.process_frame(frame)
                     sink.write_frame(annotated_frame)
         else:
             # for frame in tqdm(frame_generator, total=self.video_info.total_frames):
-            for i, frame in enumerate(frame_generator):
-                # print(i)    # Номер кадра!
-                annotated_frame = self.process_frame(i, frame, log=LOG)
+            for frame in frame_generator:
+                annotated_frame = self.process_frame(frame)
                 cv2.imshow("Processed Video", annotated_frame)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
@@ -296,7 +300,7 @@ class VideoProcessor:
                 annotated_frame, zone_out.polygon, COLORS.colors[i]
             )
 
-        labels = [f"#{tracker_id}" for tracker_id in detections.tracker_id]
+        labels = [f"ID{tracker_id}" for tracker_id in detections.tracker_id]
         annotated_frame = self.trace_annotator.annotate(annotated_frame, detections)
         annotated_frame = self.box_annotator.annotate(
             annotated_frame, detections, labels
@@ -317,32 +321,25 @@ class VideoProcessor:
                     )
                     # print(count)
                     # print(detections)
-                # print(counts)
+                print(counts)
 
         return annotated_frame
 
-    def process_frame(self, frame_idx: int, frame: np.ndarray, log: str = LOG) -> np.ndarray:
+    def process_frame(self, frame: np.ndarray) -> np.ndarray:
         results = self.model(
             frame, verbose=False, conf=self.conf_threshold, iou=self.iou_threshold
         )[0]
-        # print(frame_idx)     # номер кадра
         detections = sv.Detections.from_ultralytics(results)
 
         # TODO: Сделать список классов аргументом командной строки
         CLASS_ID = np.array([1, 2, 3, 4, 5, 6, 7]).astype(int)
 
-        # ПРИМЕР ФИЛЬТРАЦИИ КЛАССОВ В C ПОМОЩЬЮ .filter() В СПИСКЕ
-        # detections_all.class_id = np.vectorize(
-        #     lambda x: self.filter(...)
-        # filtering out detections with unwanted classes
-        # detections_all.filter(mask=mask, inplace=True)
-
-        # ФИЛЬТРАЦИЯ В np.array()
         # Маска для нежелательных классов
         mask = [True if class_id in CLASS_ID else False for class_id in detections.class_id]
         detections = detections[mask]
         # print(detections)
         # Конец фильтра
+
 
         detections.class_id = np.zeros(len(detections))
         detections = self.tracker.update_with_detections(detections)
@@ -350,39 +347,19 @@ class VideoProcessor:
         detections_in_zones = []
         detections_out_zones = []
 
-        #TODO: сделать по условию если задан аргумент ком строки
-
         for i, (zone_in, zone_out) in enumerate(zip(self.zones_in, self.zones_out)):
             detections_in_zone = detections[zone_in.trigger(detections=detections)]
             detections_in_zones.append(detections_in_zone)
             detections_out_zone = detections[zone_out.trigger(detections=detections)]
             detections_out_zones.append(detections_out_zone)
 
-            # TODO: Здесь запись в лог. Сделать аргументом ком. строки
+            # []
+            print(f'Въезд: {i} - {detections_in_zones}')
+            print(f'Выезд: {i} - {detections_out_zone}')
 
-            if detections_in_zone.tracker_id.size:
-                for track_id in detections_in_zone.tracker_id:
-                    print(f'Въезд: кадр = {frame_idx}, зона = {i}, ID =  {track_id}')
-                    record = f'{frame_idx},0,{i},{track_id}\n'
-                    with open(LOG, 'a') as f:
-                        f.write(record)
-                    # LOG = np.vstack((record, log))
-
-            if detections_out_zone.tracker_id.size:
-                for track_id in detections_out_zone.tracker_id:
-                    print(f'Выезд: кадр = {frame_idx}, зона = {i}, ID = {track_id}')
-                    record = f'{frame_idx},1,{i},{track_id}\n'
-                    with open(LOG, 'a') as f:
-                        f.write(record)
-                    # LOG = np.vstack((record, log))
-
-            # print(LOG)
         detections = self.detections_manager.update(
             detections, detections_in_zones, detections_out_zones
         )
-
-        # print(detections)
-
         return self.annotate_frame(frame, detections)
 
 
