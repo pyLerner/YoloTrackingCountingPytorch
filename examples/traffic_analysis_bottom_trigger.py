@@ -316,9 +316,9 @@ class VideoProcessor:
                         text=str(count),
                         text_anchor=text_anchor,
                         # Настройка размера флажка счетчика
-                        text_scale=2,
-                        text_thickness=6,
-                        text_padding=20,
+                        # text_scale=2,
+                        # text_thickness=6,
+                        # text_padding=20,
                         ###конец###
                         background_color=COLORS.colors[zone_in_id],
                     )
