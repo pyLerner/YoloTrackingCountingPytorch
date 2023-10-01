@@ -317,6 +317,9 @@ class VideoProcessor:
                         scene=annotated_frame,
                         text=str(count),
                         text_anchor=text_anchor,
+                        text_scale=2,
+                        text_thickness=6,
+                        text_padding=20,
                         background_color=COLORS.colors[zone_in_id],
                     )
                     # print(count)
