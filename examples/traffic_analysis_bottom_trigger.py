@@ -20,7 +20,7 @@ COLORS = sv.ColorPalette.default()
 
 ZONE_IN_POLYGONS = [
     np.array([[75, 300], [190, 300], [350, 390], [160, 420]]),		# Въезд на 10ч
-    np.array([[1060, 320], [1200, 320], [1330, 440], [1220, 450]]), 	# Въезд на 2.30
+    np.array([[1100, 400], [1300, 390], [1330, 440], [1220, 450]]), 	# Въезд на 2.30
     np.array([[900, 750], [1192, 690], [1390, 830], [1140, 920]]),	# Въезд на 5
     np.array([[0, 590], [210, 560], [250, 610], [0, 640]]),		# Въезд на 8.30
 ]
@@ -29,7 +29,7 @@ ZONE_OUT_POLYGONS = [
     np.array([[191, 300], [420, 290], [560, 360], [351, 390]]),		# Выезд на 10
     np.array([[1220, 449], [1330, 439], [1360, 460], [1210, 470]]),	# Выезд на 2.30
     np.array([[700, 810], [899, 750], [1140, 919], [880, 935]]),	# Выезд на 5
-    np.array([[0, 430], [130, 420], [210, 559], [0, 589]]),		# Выезд на 8.30
+    np.array([[0, 510], [140, 470], [210, 559], [0, 589]]),		# Выезд на 8.30
 ]
 
 
@@ -272,13 +272,13 @@ class VideoProcessor:
 
         if self.target_video_path:
             with sv.VideoSink(self.target_video_path, self.video_info) as sink:
-                # for frame in tqdm(frame_generator, total=self.video_info.total_frames):
-                for i, frame in enumerate(frame_generator):
+                for i, frame in tqdm(enumerate(frame_generator), total=self.video_info.total_frames):
+                # for i, frame in enumerate(frame_generator):
                     annotated_frame = self.process_frame(i, frame, log=LOG)
                     sink.write_frame(annotated_frame)
         else:
-            # for frame in tqdm(frame_generator, total=self.video_info.total_frames):
-            for i, frame in enumerate(frame_generator):
+            for i, frame in tqdm(enumerate(frame_generator), total=self.video_info.total_frames):
+            # for i, frame in enumerate(frame_generator):
                 # print(i)    # Номер кадра!
                 annotated_frame = self.process_frame(i, frame, log=LOG)
                 cv2.imshow("Processed Video", annotated_frame)
@@ -364,7 +364,7 @@ class VideoProcessor:
 
             if detections_in_zone.tracker_id.size:
                 for track_id in detections_in_zone.tracker_id:
-                    print(f'Въезд: кадр = {frame_idx}, зона = {i}, ID =  {track_id}')
+                    # print(f'Въезд: кадр = {frame_idx}, зона = {i}, ID =  {track_id}')
                     record = f'{frame_idx},0,{i},{track_id}\n'
                     with open(LOG, 'a') as f:
                         f.write(record)
@@ -372,7 +372,7 @@ class VideoProcessor:
 
             if detections_out_zone.tracker_id.size:
                 for track_id in detections_out_zone.tracker_id:
-                    print(f'Выезд: кадр = {frame_idx}, зона = {i}, ID = {track_id}')
+                    # print(f'Выезд: кадр = {frame_idx}, зона = {i}, ID = {track_id}')
                     record = f'{frame_idx},1,{i},{track_id}\n'
                     with open(LOG, 'a') as f:
                         f.write(record)

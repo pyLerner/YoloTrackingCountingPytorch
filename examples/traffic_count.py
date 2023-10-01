@@ -14,7 +14,7 @@ LOG = LOG_DIR.joinpath(f'exp-{LOG}.txt') # -> log Path object
 df = pd.read_csv(LOG)
 df.columns = ['frame','direction','zone','track']
 
-direction_df = pd.DataFrame([], columns=['car', 'zone_in', 'zone_out', 'delay'])
+direction_df = pd.DataFrame((), columns=['car', 'zone_in', 'zone_out', 'delay'])
 
 for car in df.track.unique():
     start = df[(df.direction == 0) & (df.track == car)]['frame'].min()
@@ -30,12 +30,12 @@ for car in df.track.unique():
     seria.dropna(inplace=True)
     
     direction_df = pd.concat([seria, direction_df], ignore_index=True)
-    
+       
     # direction_df.dropna(inplace=True)  # Отсев ложных детекций
     direction_df = direction_df[direction_df.delay > .6]  # Отсев ложных маневров, у которых время проезда не больше 1 сек.
     # direction_df = direction_df[direction_df.zone_in != direction_df.zone_out]
     
-print(direction_df)
+# print(direction_df)
 
 direction_types = {'From 0 to 1': 'налево',
                    'From 0 to 2': 'прямо',
@@ -67,7 +67,9 @@ for zone_in in direction_df.zone_in.unique():
         if zone_in != zone_out:
             street = f'From {zone_in} to {zone_out}'
             move_type = direction_types[street]
-            moves = direction_df[(direction_df.zone_in == zone_in) & (direction_df.zone_out == zone_out)]
+            moves = direction_df[
+                (direction_df.zone_in == zone_in) & (direction_df.zone_out == zone_out)
+            ]
         
         if moves.shape[0]:
             amount_moves = moves.shape[0] 
@@ -86,7 +88,7 @@ for zone_in in direction_df.zone_in.unique():
         total_df = pd.concat([out, total_df], ignore_index=True)
         # print(total_df)
 
-# TODO: Проверить откуда берутся дубликаты        
+# TODO: Проверить откуда берутся дубликаты строк        
 total_df.drop_duplicates(keep='first', inplace=True)
 total_df.sort_values(['Move_type', 'Street'], ignore_index=True, inplace=True)
 total_df.columns=['Участок дороги', 
