@@ -310,15 +310,16 @@ class VideoProcessor:
                 counts = self.detections_manager.counts[zone_out_id]
                 for i, zone_in_id in enumerate(counts):
                     count = len(self.detections_manager.counts[zone_out_id][zone_in_id])
-                    text_anchor = sv.Point(x=zone_center.x, y=zone_center.y + 40 * i)
+                    # Размер квадратика счетчика (40 для дефолтных значений)
+                    text_anchor = sv.Point(x=zone_center.x, y=zone_center.y + 50 * i)
                     annotated_frame = sv.draw_text(
                         scene=annotated_frame,
                         text=str(count),
                         text_anchor=text_anchor,
                         # Настройка размера флажка счетчика
-                        # text_scale=2,
-                        # text_thickness=6,
-                        # text_padding=20,
+                        text_scale=1,
+                        text_thickness=4,
+                        text_padding=10,
                         ###конец###
                         background_color=COLORS.colors[zone_in_id],
                     )
