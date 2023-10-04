@@ -21,7 +21,10 @@ tensorboard>=2.13.0
 torch>=1.7.0
 torchvision>=0.8.1
 yacs>=0.1.8             # clip
+opencv-python           # opencv
+ultralytics             # ultralytics
 supervision             # 0.15.0rc1 working with traffic analysis
+tqdm                    # bar chart 
 # Export ----------------------------------------------------------------------
 
 # onnx>=1.12.0          # ONNX export
